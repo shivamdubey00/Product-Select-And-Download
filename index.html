@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bill Generation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        header img {
+            height: 80px;
+        }
+        .heading {
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .address {
+            font-size: 14px;
+            color: gray;
+            text-align: center;
+            margin-top: -10px;
+        }
+        .contact {
+            text-align: center;
+            font-size: 12px;
+        }
+        .item-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 20px 0;
+        }
+        .item-list li {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+        .item-list select {
+            margin-left: 10px;
+            width: 120px;
+        }
+        .ads {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .ads img {
+            width: 100%;
+            max-width: 700px;
+            height: auto;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="receipt">
+    <header>
+        <div class="heading">Shopping Receipt</div>
+        <img src="https://via.placeholder.com/100" alt="Logo" id="logo">
+    </header>
+
+    <div class="address">1234, Example Street, City, Country - 56789</div>
+    <div class="contact">Contact: (123) 456-7890</div>
+
+    <ul class="item-list" id="itemList">
+        <!-- Items will be dynamically generated here -->
+    </ul>
+
+    <div>
+        <button id="generateXLS">Generate Excel</button>
+        <button id="generateDOC">Generate Word</button>
+        <button id="generatePDF">Generate PDF</button>
+        <button id="generateIMG">Generate Image</button>
+    </div>
+
+    <div class="ads">
+        <img src="https://via.placeholder.com/700x150?text=Advertisement" alt="Advertisement Image" id="adImg">
+    </div>
+</div>
+
+<script>
+    const itemTemplate = [
+        { id: 1, name: "Apple" },
+        { id: 2, name: "Banana" },
+        { id: 3, name: "Grapes" },
+        { id: 4, name: "Mango" },
+        { id: 5, name: "Orange" }
+    ];
+
+    const availableQuantities = [100, 250, 500, 1000]; // Quantity options (grams)
+
+    // Dynamically generate the item list
+    function generateItemList() {
+        const itemList = document.getElementById('itemList');
+        itemTemplate.forEach(item => {
+            const listItem = document.createElement('li');
+            listItem.innerHTML = `
+                <input type="checkbox" id="item${item.id}" value="${item.name}"> ${item.name}
+                <select id="qty${item.id}">
+                    ${availableQuantities.map(qty => `<option value="${qty}">${qty} grams</option>`).join('')}
+                </select>
+            `;
+            itemList.appendChild(listItem);
+        });
+    }
+
+    // Common function to create the content for various formats
+    function createReceiptContent() {
+        let content = `
+            <html>
+                <head>
+                    <title>Shopping Receipt</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; }
+                        .heading { text-align: center; font-size: 28px; font-weight: bold; }
+                        .address, .contact { text-align: center; font-size: 14px; color: gray; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                        th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+                    </style>
+                </head>
+                <body>
+                    <p > || Shree Ganeshya Namaha ||</p>
+                    <br>
+                    <br>
+                    <div class="heading">Aachrya Chandramani Ji Maharaj </div>
+                     <div class="address">Naigaion East Mumbai , Maharashtra 401208</div>
+                    <div class="address">1234, Example Street, City, Country - 56789</div>
+                                        <div class="contact">Contact: 90982122985 / Dubeychandramani5056@gmail.com</div>
+
+                    <h2>Selected Items</h2>
+                    <table>
+                        <tr>
+                            <th>Item</th>
+                            <th>Quantity (g)</th>
+                        </tr>`;
+        
+        itemTemplate.forEach(item => {
+            const checkbox = document.getElementById(`item${item.id}`);
+            const quantitySelect = document.getElementById(`qty${item.id}`);
+            if (checkbox.checked) {
+                const quantity = quantitySelect.value;
+
+                content += `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td>${quantity}</td>
+                    </tr>`;
+            }
+        });
+
+        content += `
+                    </table>
+                </body>
+            </html>`;
+
+        return content;
+    }
+
+    // Generate PDF receipt
+    function generatePDFReceipt() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        let y = 20;
+
+        // Add content to the PDF
+        doc.html(createReceiptContent(), {
+            callback: function (doc) {
+                doc.save("shopping_receipt.pdf");
+            }
+        });
+    }
+
+    // Generate Excel file
+    function generateExcel() {
+        const workbook = XLSX.utils.book_new();
+        const worksheetData = [['Item', 'Quantity (g)']];
+        
+        itemTemplate.forEach(item => {
+            const checkbox = document.getElementById(`item${item.id}`);
+            const quantitySelect = document.getElementById(`qty${item.id}`);
+            if (checkbox.checked) {
+                const quantity = quantitySelect.value;
+                worksheetData.push([item.name, quantity]);
+            }
+        });
+
+        const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Receipt");
+        XLSX.writeFile(workbook, "shopping_receipt.xlsx");
+    }
+
+    // Generate Word document
+    function generateWord() {
+        const content = createReceiptContent();
+        const blob = new Blob([content], { type: 'application/msword' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = "shopping_receipt.doc";
+        link.click();
+    }
+
+    // Generate image from receipt
+    function generateImage() {
+        html2canvas(document.getElementById("receipt")).then(canvas => {
+            const imgData = canvas.toDataURL("image/png");
+            const link = document.createElement("a");
+            link.href = imgData;
+            link.download = "shopping_receipt.png";
+            link.click();
+        });
+    }
+
+    // Attach events to buttons
+    document.getElementById('generateXLS').addEventListener('click', generateExcel);
+    document.getElementById('generateDOC').addEventListener('click', generateWord);
+    document.getElementById('generatePDF').addEventListener('click', generatePDFReceipt);
+    document.getElementById('generateIMG').addEventListener('click', generateImage);
+
+    // Generate the item list on page load
+    window.onload = generateItemList;
+</script>
+
+</body>
+</html>
