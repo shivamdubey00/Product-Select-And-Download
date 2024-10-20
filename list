@@ -30,11 +30,17 @@
         .heading {
             font-size: 28px;
             font-weight: bold;
+            text-align: center;
         }
         .address {
             font-size: 14px;
             color: gray;
+            text-align: center;
             margin-top: -10px;
+        }
+        .contact {
+            text-align: center;
+            font-size: 12px;
         }
         .item-list {
             list-style-type: none;
@@ -126,39 +132,70 @@
         });
     }
 
-    // Generate PDF receipt
-    function generatePDFReceipt() {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        let y = 20;
+    // Common function to create the content for various formats
+    function createReceiptContent() {
+        let content = `
+            <html>
+                <head>
+                    <title>Shopping Receipt</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; }
+                        .heading { text-align: center; font-size: 28px; font-weight: bold; }
+                        .address, .contact { text-align: center; font-size: 14px; color: gray; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                        th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+                    </style>
+                </head>
+                <body>
+                    <p > || Shree Ganeshya Namaha ||</p>
+                    <br>
+                    <br>
+                    <div class="heading">Aachrya Chandramani Ji Maharaj </div>
+                     <div class="address">Naigaion East Mumbai , Maharashtra 401208</div>
+                    <div class="address">1234, Example Street, City, Country - 56789</div>
+                                        <div class="contact">Contact: 90982122985 / Dubeychandramani5056@gmail.com</div>
 
-        // Add heading, logo, address, and contact information
-        doc.setFontSize(18);
-        doc.text("Shopping Receipt", 105, y, { align: "center" });
-        y += 10;
-        doc.setFontSize(12);
-        doc.text("1234, Example Street, City, Country - 56789", 105, y, { align: "center" });
-        y += 5;
-        doc.text("Contact: (123) 456-7890", 105, y, { align: "center" });
-        y += 20;
-
-        // Add item list header
-        doc.setFontSize(14);
-        doc.text("Selected Items", 20, y);
-        y += 10;
-
+                    <h2>Selected Items</h2>
+                    <table>
+                        <tr>
+                            <th>Item</th>
+                            <th>Quantity (g)</th>
+                        </tr>`;
+        
         itemTemplate.forEach(item => {
             const checkbox = document.getElementById(`item${item.id}`);
             const quantitySelect = document.getElementById(`qty${item.id}`);
             if (checkbox.checked) {
                 const quantity = quantitySelect.value;
 
-                doc.text(`${item.name}: ${quantity}`, 20, y);
-                y += 10;
+                content += `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td>${quantity}</td>
+                    </tr>`;
             }
         });
 
-        doc.save("shopping_receipt.pdf");
+        content += `
+                    </table>
+                </body>
+            </html>`;
+
+        return content;
+    }
+
+    // Generate PDF receipt
+    function generatePDFReceipt() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        let y = 20;
+
+        // Add content to the PDF
+        doc.html(createReceiptContent(), {
+            callback: function (doc) {
+                doc.save("shopping_receipt.pdf");
+            }
+        });
     }
 
     // Generate Excel file
@@ -182,42 +219,7 @@
 
     // Generate Word document
     function generateWord() {
-        let doc = new window.JSZip();
-        let content = `
-            <html>
-                <head>
-                    <title>Shopping Receipt</title>
-                </head>
-                <body>
-                    <h1>Shopping Receipt</h1>
-                    <p>1234, Example Street, City, Country - 56789</p>
-                    <p>Contact: (123) 456-7890</p>
-                    <h2>Selected Items</h2>
-                    <table border="1">
-                        <tr>
-                            <th>Item</th>
-                            <th>Quantity (g)</th>
-                        </tr>`;
-        
-        itemTemplate.forEach(item => {
-            const checkbox = document.getElementById(`item${item.id}`);
-            const quantitySelect = document.getElementById(`qty${item.id}`);
-            if (checkbox.checked) {
-                const quantity = quantitySelect.value;
-
-                content += `
-                    <tr>
-                        <td>${item.name}</td>
-                        <td>${quantity}</td>
-                    </tr>`;
-            }
-        });
-
-        content += `
-                </table>
-                </body>
-            </html>`;
-
+        const content = createReceiptContent();
         const blob = new Blob([content], { type: 'application/msword' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
